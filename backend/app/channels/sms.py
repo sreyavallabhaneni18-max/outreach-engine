@@ -1,10 +1,10 @@
 import os
+from twilio.base.exceptions import TwilioRestException
 from twilio.rest import Client
 from app.channels.base import BaseChannel
 
 
 class SMSChannel(BaseChannel):
-
     async def send(self, recipient: str, message: str):
         try:
             client = Client(
@@ -20,11 +20,23 @@ class SMSChannel(BaseChannel):
 
             return {
                 "sid": msg.sid,
-                "status": msg.status
+                "status": msg.status,
+                "retryable": False,
+            }
+
+        except TwilioRestException as e:
+            # 4xx usually means permanent failure, 5xx may be transient
+            retryable = getattr(e, "status", None) is not None and e.status >= 500
+
+            return {
+                "status": "failed",
+                "error": str(e),
+                "retryable": retryable,
             }
 
         except Exception as e:
             return {
                 "status": "failed",
-                "error": str(e)
+                "error": str(e),
+                "retryable": True,
             }
