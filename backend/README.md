@@ -57,13 +57,17 @@ pip install fastapi uvicorn sqlalchemy python-dotenv requests twilio
 6. Run the backend:
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload 
 ```
 
 7. Verify the server is running by visiting:
 
 ```text
 http://localhost:8000/
+```
+```
+swagger Url 
+http://localhost:8000/docs#/
 ```
 
 ## Environment variables

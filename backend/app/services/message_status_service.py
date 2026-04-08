@@ -1,7 +1,9 @@
 from datetime import datetime
+import asyncio
 from sqlalchemy.orm import Session
 
 from app.models.db_message import MessageRecord
+from app.services.status_stream_service import status_stream_service
 from app.utils.mailgun_utils import normalize_mailgun_message_id
 from app.utils.status_mapper import map_mailgun_status, map_twilio_status
 
@@ -57,4 +59,35 @@ def update_message_status(
     db.add(record)
     db.commit()
     db.refresh(record)
+
+    # Fetch all records for this outreach request so frontend gets full status snapshot
+    related_records = (
+        db.query(MessageRecord)
+        .filter(MessageRecord.request_id == record.request_id)
+        .all()
+    )
+
+    payload = {
+        "request_id": record.request_id,
+        "results": [
+            {
+                "channel": item.channel,
+                "status": item.status,
+                "error": item.error,
+                "message_id": item.id,
+                "provider": item.provider,
+                "provider_status": item.provider_status,
+            }
+            for item in related_records
+        ],
+    }
+
+    # Publish latest state to any connected SSE clients
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(status_stream_service.publish(record.request_id, payload))
+    except RuntimeError:
+        # No running event loop available
+        pass
+
     return record

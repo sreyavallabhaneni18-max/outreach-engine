@@ -1,15 +1,21 @@
+import asyncio
+import json
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.db import get_db
+from app.db import SessionLocal, get_db
 from app.models.db_message import MessageRecord
-from app.models.message import Channel, OutreachRequest, OutreachResponse
+from app.models.message import OutreachRequest, OutreachResponse
 from app.services.outreach_service import process_outreach, send_single_channel
-import uuid
+from app.services.status_stream_service import status_stream_service
 
 router = APIRouter()
 
-#sends all channels 
+
+# sends all channels
 @router.post("/outreach", response_model=OutreachResponse)
 async def send_outreach(
     request: OutreachRequest,
@@ -20,7 +26,8 @@ async def send_outreach(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-#sens specific single channel 
+
+# sends specific single channel
 @router.post("/outreach/{channel}", response_model=OutreachResponse)
 async def send_single(
     channel: str,
@@ -78,3 +85,53 @@ def get_messages_by_request_id(
             for record in records
         ],
     }
+
+
+@router.get("/outreach/{request_id}/stream")
+async def stream_outreach_status(request_id: str):
+    async def event_generator():
+        queue = await status_stream_service.subscribe(request_id)
+
+        db = SessionLocal()
+        try:
+            records = (
+                db.query(MessageRecord)
+                .filter(MessageRecord.request_id == request_id)
+                .all()
+            )
+
+            initial_payload = {
+                "request_id": request_id,
+                "results": [
+                    {
+                        "channel": record.channel,
+                        "status": record.status,
+                        "error": record.error,
+                        "message_id": record.id,
+                        "provider": record.provider,
+                        "provider_status": record.provider_status,
+                    }
+                    for record in records
+                ],
+            }
+
+            yield f"data: {json.dumps(initial_payload, default=str)}\n\n"
+
+            while True:
+                data = await queue.get()
+                yield f"data: {json.dumps(data, default=str)}\n\n"
+
+        except asyncio.CancelledError:
+            pass
+        finally:
+            db.close()
+            status_stream_service.unsubscribe(request_id, queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )

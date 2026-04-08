@@ -1,8 +1,24 @@
+# Python / Backend
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 venv/
 .env
+
+# Node / Frontend
 node_modules/
+dist/
+
 
 # Database
 outreach.db
+
+
+# Logs
+*.log
+
+
+# OS / Editor
+.DS_Store
+.vscode/
