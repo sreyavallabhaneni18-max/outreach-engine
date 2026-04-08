@@ -15,12 +15,15 @@ class WhatsAppChannel(BaseChannel):
             msg = client.messages.create(
                 body=message,
                 from_=os.getenv("TWILIO_WHATSAPP_NUMBER"),
-                to=f"whatsapp:{recipient}"
+                to=f"whatsapp:{recipient}",
+                status_callback=os.getenv("TWILIO_STATUS_CALLBACK_URL"),
             )
 
             return {
-                "sid": msg.sid,
-                "status": msg.status,
+                "status": "queued",
+                "provider": "twilio",
+                "provider_message_id": msg.sid,
+                "provider_status": msg.status,
                 "retryable": False,
             }
 
@@ -29,6 +32,7 @@ class WhatsAppChannel(BaseChannel):
 
             return {
                 "status": "failed",
+                "provider": "twilio",
                 "error": str(e),
                 "retryable": retryable,
             }
@@ -36,6 +40,7 @@ class WhatsAppChannel(BaseChannel):
         except Exception as e:
             return {
                 "status": "failed",
+                "provider": "twilio",
                 "error": str(e),
                 "retryable": True,
             }

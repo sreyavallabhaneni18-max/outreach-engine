@@ -15,21 +15,24 @@ class SMSChannel(BaseChannel):
             msg = client.messages.create(
                 body=message,
                 from_=os.getenv("TWILIO_PHONE_NUMBER"),
-                to=recipient
+                to=recipient,
+                status_callback=os.getenv("TWILIO_STATUS_CALLBACK_URL"),
             )
 
             return {
-                "sid": msg.sid,
-                "status": msg.status,
+                "status": "queued",
+                "provider": "twilio",
+                "provider_message_id": msg.sid,
+                "provider_status": msg.status,
                 "retryable": False,
             }
 
         except TwilioRestException as e:
-            # 4xx usually means permanent failure, 5xx may be transient
             retryable = getattr(e, "status", None) is not None and e.status >= 500
 
             return {
                 "status": "failed",
+                "provider": "twilio",
                 "error": str(e),
                 "retryable": retryable,
             }
@@ -37,6 +40,7 @@ class SMSChannel(BaseChannel):
         except Exception as e:
             return {
                 "status": "failed",
+                "provider": "twilio",
                 "error": str(e),
                 "retryable": True,
             }

@@ -1,6 +1,8 @@
 import os
 import requests
+
 from app.channels.base import BaseChannel
+from app.utils.mailgun_utils import normalize_mailgun_message_id
 
 
 class EmailChannel(BaseChannel):
@@ -22,35 +24,36 @@ class EmailChannel(BaseChannel):
                 timeout=10,
             )
 
-            print("MAILGUN STATUS:", response.status_code)
-            print("MAILGUN RESPONSE:", response.text)
-
             if response.status_code == 200:
                 body = response.json()
+                provider_message_id = normalize_mailgun_message_id(body.get("id"))
+
                 return {
                     "status": "queued",
-                    "id": body.get("id"),
+                    "provider": "mailgun",
+                    "provider_message_id": provider_message_id,
                     "retryable": False,
                 }
 
-            # Permanent client-side failures: do not retry
             if response.status_code in [400, 401, 403, 404]:
                 return {
                     "status": "failed",
+                    "provider": "mailgun",
                     "error": response.text,
                     "retryable": False,
                 }
 
-            # Provider-side / transient failures: retry
             if response.status_code >= 500:
                 return {
                     "status": "failed",
+                    "provider": "mailgun",
                     "error": response.text,
                     "retryable": True,
                 }
 
             return {
                 "status": "failed",
+                "provider": "mailgun",
                 "error": response.text,
                 "retryable": False,
             }
@@ -58,6 +61,7 @@ class EmailChannel(BaseChannel):
         except requests.Timeout:
             return {
                 "status": "failed",
+                "provider": "mailgun",
                 "error": "Mailgun request timed out",
                 "retryable": True,
             }
@@ -65,6 +69,7 @@ class EmailChannel(BaseChannel):
         except requests.RequestException as e:
             return {
                 "status": "failed",
+                "provider": "mailgun",
                 "error": str(e),
                 "retryable": True,
             }
@@ -72,6 +77,7 @@ class EmailChannel(BaseChannel):
         except Exception as e:
             return {
                 "status": "failed",
+                "provider": "mailgun",
                 "error": str(e),
                 "retryable": False,
             }

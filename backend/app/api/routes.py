@@ -61,11 +61,17 @@ def get_messages_by_request_id(
             {
                 "id": record.id,
                 "channel": record.channel,
+                "provider": record.provider,
                 "recipient": record.recipient,
                 "provider_message_id": record.provider_message_id,
+                "provider_status": record.provider_status,
                 "status": record.status,
                 "retry_count": record.retry_count,
                 "error": record.error,
+                "sent_at": record.sent_at,
+                "delivered_at": record.delivered_at,
+                "failed_at": record.failed_at,
+                "last_status_update_at": record.last_status_update_at,
                 "created_at": record.created_at,
                 "updated_at": record.updated_at,
             }
