@@ -85,6 +85,11 @@ def update_message_record(
     return record
 
 
+def build_personalized_message(request: OutreachRequest) -> str:
+    greeting = f"Hi {request.name},"
+    return f"{greeting}\n\n{request.message}"
+
+
 async def send_single_channel(
     channel: str,
     request: OutreachRequest,
@@ -95,6 +100,7 @@ async def send_single_channel(
     handler = get_channel(channel)
     recipient = get_recipient_for_channel(channel, request)
     provider = get_provider_for_channel(channel)
+    message_body = build_personalized_message(request)
 
     record = create_message_record(
         db=db,
@@ -102,7 +108,7 @@ async def send_single_channel(
         channel=channel,
         provider=provider,
         recipient=recipient,
-        message_body=request.message,
+        message_body=message_body,
     )
 
     for attempt in range(max_retries + 1):
@@ -110,7 +116,7 @@ async def send_single_channel(
             logger.info(f"Sending {channel} to {recipient} (attempt {attempt + 1})")
             update_message_record(db, record, retry_count=attempt)
 
-            response = await handler.send(recipient, request.message)
+            response = await handler.send(recipient, message_body)
 
             if response.get("status") == "failed":
                 retryable = response.get("retryable", False)

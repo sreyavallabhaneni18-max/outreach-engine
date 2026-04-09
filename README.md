@@ -117,8 +117,8 @@ Ensure both services are running simultaneously for full functionality.
 - **Add Authentication and Authorization**  
   Secure the API with authentication (e.g., JWT) and role-based access control to make it production-ready.
 
-- **Support Message Templating and Personalization**  
-  Introduce reusable templates and dynamic variables for more flexible and scalable message generation.
+- **AI-driven Workflow Extensions**  
+  Introduce AI-powered components for specific tasks such as message personalization, content optimization, and delivery outcome analysis. These would be designed as separate modules to enhance the outreach process without impacting the core messaging pipeline.
 
 - **Add Dashboard View for Message Tracking**  
   Extend the frontend to include a dashboard that fetches and displays all outreach messages along with their current statuses. This would provide better visibility into message history, delivery outcomes, and system activity, improving usability for monitoring campaigns.
