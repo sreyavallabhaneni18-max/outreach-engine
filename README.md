@@ -60,10 +60,74 @@ Ensure both services are running simultaneously for full functionality.
 - Responsive web interface
 - RESTful API for integrations
 
-## Contributing
+## Providers Chosen and Why
 
-Please refer to the individual README files in the frontend and backend directories for specific contribution guidelines.
+- **Mailgun (Email)**  
+  Mailgun was chosen for email delivery due to its simple REST API and quick sandbox setup. It allows sending test emails without complex domain configuration, making it ideal for rapid development and testing.
 
-## License
+- **Twilio (SMS)**  
+  Twilio was selected for SMS because of its reliable infrastructure, clear API design, and strong documentation. It also provides built-in delivery status callbacks, which makes it easy to implement real-time message status tracking.
 
-[Add license information here]
+- **Twilio (WhatsApp Sandbox)**  
+  Twilio’s WhatsApp sandbox was used to support WhatsApp messaging without requiring a production business account. Since it follows a similar API pattern to SMS, it allowed reuse of channel logic and simplified integration.
+
+## Design Decisions and Tradeoffs
+
+- **Monolithic Architecture (FastAPI)**  
+  The system is implemented as a single service instead of multiple microservices. This reduces setup and deployment complexity for the scope of the project, while still keeping the code modular internally. In a production system, this could be split into separate services (e.g., messaging, status tracking, workers).
+
+- **Channel Abstraction Layer**  
+  Each communication channel (email, SMS, WhatsApp) is implemented as a separate module/class. This allows new providers or channels to be added with minimal changes to the core orchestration logic, improving extensibility.
+
+- **SQLite for Persistence**  
+  SQLite was chosen for simplicity and zero-setup local development. This avoids the overhead of managing a full database system. The tradeoff is limited scalability and concurrency compared to databases like PostgreSQL.
+
+- **Webhook-Based Status Updates**  
+  Delivery status updates are handled via provider webhooks instead of polling. This mirrors real-world systems and ensures more accurate, real-time updates. The tradeoff is additional setup complexity (e.g., needing ngrok for local testing).
+
+- **Synchronous Processing with Simple Retries**  
+  Message sending is handled synchronously with basic retry logic. This keeps the system simple and easy to reason about. However, it is less scalable compared to using background workers or queues (e.g., RabbitMQ, Celery).
+
+- **Sequential Channel Execution**  
+  When multiple channels are selected, messages are sent sequentially rather than in parallel. This simplifies error handling and control flow, but increases latency. Parallel execution could improve performance in a production system.
+
+- **Minimal Frontend for Demonstration**  
+  A lightweight React frontend was included to demonstrate end-to-end functionality. The focus of the project is backend design, so the UI is intentionally simple.
+
+- **No Authentication Layer**  
+  Authentication and authorization were not implemented to keep the scope focused on core messaging functionality. In a real-world system, secure access control would be essential.
+
+## What I’d Do Differently With More Time
+
+- **Move to a Scalable Database (PostgreSQL)**  
+  Replace SQLite with PostgreSQL to support higher concurrency, better indexing, and production-grade reliability.
+
+- **Introduce Asynchronous Processing (Queues/Workers)**  
+  Use a message queue (e.g., RabbitMQ, Redis, or Celery) to handle message sending and retries asynchronously. This would improve scalability and prevent blocking API requests.
+
+- **Implement Advanced Retry Strategies**  
+  Add exponential backoff, retry limits, and failure categorization (temporary vs permanent errors) to make retries more robust.
+
+- **Add Rate Limiting and Provider Throttling Handling**  
+  Handle external provider rate limits more gracefully to avoid failures during high traffic or bursts.
+
+- **Improve Observability**  
+  Add structured logging, metrics, and distributed tracing to monitor system health and debug issues more effectively.
+
+- **Add Authentication and Authorization**  
+  Secure the API with authentication (e.g., JWT) and role-based access control to make it production-ready.
+
+- **Support Message Templating and Personalization**  
+  Introduce reusable templates and dynamic variables for more flexible and scalable message generation.
+
+- **Parallelize Multi-Channel Sends**  
+  Send messages across multiple channels concurrently to reduce latency and improve performance.
+
+- **Add Comprehensive Testing**  
+  Include unit tests, integration tests, and webhook simulation tests to improve reliability and confidence in changes.
+
+- **Containerization and Deployment**  
+  Dockerize the application and set up CI/CD pipelines for easier deployment and environment consistency.
+
+- **Improve Frontend Experience**  
+  Add real-time updates (e.g., WebSockets or SSE), better error states, and improved UX for monitoring message status.
