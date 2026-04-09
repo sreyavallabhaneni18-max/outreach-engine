@@ -85,11 +85,14 @@ Ensure both services are running simultaneously for full functionality.
 - **Webhook-Based Status Updates**  
   Delivery status updates are handled via provider webhooks instead of polling. This mirrors real-world systems and ensures more accurate, real-time updates. The tradeoff is additional setup complexity (e.g., needing ngrok for local testing).
 
-- **Synchronous Processing with Simple Retries**  
-  Message sending is handled synchronously with basic retry logic. This keeps the system simple and easy to reason about. However, it is less scalable compared to using background workers or queues (e.g., RabbitMQ, Celery).
+- **Asynchronous Multi-Channel Processing**  
+  Messages across selected channels are orchestrated concurrently using `asyncio.gather`, reducing overall latency
 
-- **Sequential Channel Execution**  
-  When multiple channels are selected, messages are sent sequentially rather than in parallel. This simplifies error handling and control flow, but increases latency. Parallel execution could improve performance in a production system.
+- **Simple Retry Strategy**  
+  Basic retry logic is implemented with a fixed retry count and exponential delay. This keeps the system simple, but lacks more advanced retry handling such as failure classification or dead-letter queues.
+
+- **Shared Database Session Across Tasks**  
+  The same SQLAlchemy session is passed into concurrent channel tasks for simplicity. While sufficient for this scope, a more robust design would isolate sessions per task to avoid shared transaction state.
 
 - **Minimal Frontend for Demonstration**  
   A lightweight React frontend was included to demonstrate end-to-end functionality. The focus of the project is backend design, so the UI is intentionally simple.
@@ -102,11 +105,8 @@ Ensure both services are running simultaneously for full functionality.
 - **Move to a Scalable Database (PostgreSQL)**  
   Replace SQLite with PostgreSQL to support higher concurrency, better indexing, and production-grade reliability.
 
-- **Introduce Asynchronous Processing (Queues/Workers)**  
-  Use a message queue (e.g., RabbitMQ, Redis, or Celery) to handle message sending and retries asynchronously. This would improve scalability and prevent blocking API requests.
-
-- **Implement Advanced Retry Strategies**  
-  Add exponential backoff, retry limits, and failure categorization (temporary vs permanent errors) to make retries more robust.
+- **Introduce Background Processing (Queues/Workers)**  
+  Use a message queue (e.g., RabbitMQ, Redis, or Celery) to handle message sending and retries outside the request lifecycle. This would improve scalability and prevent blocking API requests.
 
 - **Add Rate Limiting and Provider Throttling Handling**  
   Handle external provider rate limits more gracefully to avoid failures during high traffic or bursts.
@@ -120,8 +120,8 @@ Ensure both services are running simultaneously for full functionality.
 - **Support Message Templating and Personalization**  
   Introduce reusable templates and dynamic variables for more flexible and scalable message generation.
 
-- **Parallelize Multi-Channel Sends**  
-  Send messages across multiple channels concurrently to reduce latency and improve performance.
+- **Add Dashboard View for Message Tracking**  
+  Extend the frontend to include a dashboard that fetches and displays all outreach messages along with their current statuses. This would provide better visibility into message history, delivery outcomes, and system activity, improving usability for monitoring campaigns.
 
 - **Add Comprehensive Testing**  
   Include unit tests, integration tests, and webhook simulation tests to improve reliability and confidence in changes.
@@ -130,4 +130,4 @@ Ensure both services are running simultaneously for full functionality.
   Dockerize the application and set up CI/CD pipelines for easier deployment and environment consistency.
 
 - **Improve Frontend Experience**  
-  Add real-time updates (e.g., WebSockets or SSE), better error states, and improved UX for monitoring message status.
+  Add real-time updates (e.g., WebSockets), better error states, and improved UX () for monitoring message status.
