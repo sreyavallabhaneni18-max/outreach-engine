@@ -8,6 +8,12 @@ from app.utils.mailgun_utils import normalize_mailgun_message_id
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
+TWILIO_ERROR_MESSAGES = {
+    "30032": "The destination number is unreachable or cannot receive SMS.",
+    "63016": "Channel Sandbox can only send messages to phone numbers that have joined the Sandbox.",
+}
+
+
 @router.post("/twilio/status")
 async def twilio_status_webhook(
     request: Request,
@@ -26,7 +32,14 @@ async def twilio_status_webhook(
     if not message_sid or not message_status:
         raise HTTPException(status_code=400, detail="Missing Twilio webhook fields")
 
-    error = error_message or error_code
+    mapped_error_message = None
+    if error_code:
+        mapped_error_message = TWILIO_ERROR_MESSAGES.get(
+            error_code,
+            f"Twilio delivery failed with error code {error_code}."
+        )
+
+    error = error_message or mapped_error_message
 
     update_message_status(
         db,
@@ -34,6 +47,7 @@ async def twilio_status_webhook(
         provider_message_id=message_sid,
         provider_status=message_status,
         error=error,
+        error_code=error_code,
     )
 
     return {"ok": True}

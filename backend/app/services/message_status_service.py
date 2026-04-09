@@ -15,6 +15,7 @@ def update_message_status(
     provider_message_id: str,
     provider_status: str,
     error: str | None = None,
+    error_code: str | None = None,
 ) -> MessageRecord | None:
     if provider == "mailgun":
         provider_message_id = normalize_mailgun_message_id(provider_message_id)
@@ -46,7 +47,10 @@ def update_message_status(
 
     record.provider_status = provider_status
     record.status = normalized_status
-    record.error = error
+
+    if error is not None:
+        record.error = error
+
     record.last_status_update_at = now
 
     if normalized_status == "sent" and record.sent_at is None:
@@ -60,7 +64,6 @@ def update_message_status(
     db.commit()
     db.refresh(record)
 
-    # Fetch all records for this outreach request so frontend gets full status snapshot
     related_records = (
         db.query(MessageRecord)
         .filter(MessageRecord.request_id == record.request_id)
@@ -74,6 +77,7 @@ def update_message_status(
                 "channel": item.channel,
                 "status": item.status,
                 "error": item.error,
+                "error_code": error_code if item.id == record.id else None,
                 "message_id": item.id,
                 "provider": item.provider,
                 "provider_status": item.provider_status,
@@ -82,12 +86,10 @@ def update_message_status(
         ],
     }
 
-    # Publish latest state to any connected SSE clients
     try:
         loop = asyncio.get_running_loop()
         loop.create_task(status_stream_service.publish(record.request_id, payload))
     except RuntimeError:
-        # No running event loop available
         pass
 
     return record

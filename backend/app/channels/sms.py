@@ -33,7 +33,8 @@ class SMSChannel(BaseChannel):
             return {
                 "status": "failed",
                 "provider": "twilio",
-                "error": str(e),
+                "error": e.msg or str(e),
+                "error_code": str(e.code) if getattr(e, "code", None) else None,
                 "retryable": retryable,
             }
 
@@ -42,5 +43,6 @@ class SMSChannel(BaseChannel):
                 "status": "failed",
                 "provider": "twilio",
                 "error": str(e),
+                "error_code": None,
                 "retryable": True,
             }

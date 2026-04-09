@@ -1,69 +1,54 @@
+import json
 import os
 import requests
 
 from app.channels.base import BaseChannel
-from app.utils.mailgun_utils import normalize_mailgun_message_id
 
 
 class EmailChannel(BaseChannel):
     async def send(self, recipient: str, message: str):
-        try:
-            domain = os.getenv("MAILGUN_DOMAIN")
-            api_key = os.getenv("MAILGUN_API_KEY")
-            from_email = os.getenv("MAILGUN_FROM_EMAIL")
+        domain = os.getenv("MAILGUN_DOMAIN")
+        api_key = os.getenv("MAILGUN_API_KEY")
+        from_email = os.getenv("MAILGUN_FROM_EMAIL")
 
+        try:
             response = requests.post(
                 f"https://api.mailgun.net/v3/{domain}/messages",
                 auth=("api", api_key),
                 data={
-                    "from": f"Mailgun Sandbox <{from_email}>",
+                    "from": from_email,
                     "to": recipient,
-                    "subject": "Outreach Message",
+                    "subject": "TalentFlow Outreach",
                     "text": message,
                 },
-                timeout=10,
             )
 
-            if response.status_code == 200:
-                body = response.json()
-                provider_message_id = normalize_mailgun_message_id(body.get("id"))
+            if response.status_code >= 400:
+                error_message = "Email send failed"
 
-                return {
-                    "status": "queued",
-                    "provider": "mailgun",
-                    "provider_message_id": provider_message_id,
-                    "retryable": False,
-                }
+                try:
+                    error_json = response.json()
+                    error_message = error_json.get("message", error_message)
+                except Exception:
+                    error_message = response.text or error_message
 
-            if response.status_code in [400, 401, 403, 404]:
+                retryable = response.status_code >= 500
+
                 return {
                     "status": "failed",
                     "provider": "mailgun",
-                    "error": response.text,
-                    "retryable": False,
+                    "error": error_message,
+                    "retryable": retryable,
                 }
 
-            if response.status_code >= 500:
-                return {
-                    "status": "failed",
-                    "provider": "mailgun",
-                    "error": response.text,
-                    "retryable": True,
-                }
+            data = response.json()
 
             return {
-                "status": "failed",
+                "status": "queued",
                 "provider": "mailgun",
-                "error": response.text,
+                "provider_message_id": data.get("id"),
+                "provider_status": "queued",
                 "retryable": False,
-            }
-
-        except requests.Timeout:
-            return {
-                "status": "failed",
-                "provider": "mailgun",
-                "error": "Mailgun request timed out",
-                "retryable": True,
             }
 
         except requests.RequestException as e:
@@ -72,12 +57,4 @@ class EmailChannel(BaseChannel):
                 "provider": "mailgun",
                 "error": str(e),
                 "retryable": True,
-            }
-
-        except Exception as e:
-            return {
-                "status": "failed",
-                "provider": "mailgun",
-                "error": str(e),
-                "retryable": False,
             }

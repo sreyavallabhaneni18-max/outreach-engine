@@ -16,8 +16,16 @@ export default function DeliveryStatusCard({ item }) {
         <span className="capitalize">{item.status}</span>
       </div>
 
+      {item.error_code && (
+        <p className="mt-1 text-sm font-medium">
+          Error code: {item.error_code}
+        </p>
+      )}
+
       {item.error && (
-        <p className="text-sm mt-1">{item.error}</p>
+        <p className="mt-1 text-sm">
+          {item.error}
+        </p>
       )}
     </div>
   );

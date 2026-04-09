@@ -21,6 +21,7 @@ class ChannelResult(BaseModel):
     channel: Channel
     status: str
     error: Optional[str] = None
+    error_code: Optional[str] = None
     message_id: Optional[int] = None
 
 

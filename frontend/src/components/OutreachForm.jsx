@@ -43,11 +43,11 @@ export default function OutreachForm({
           name="phone"
           value={form.phone}
           onChange={onChange}
-          placeholder="+18572756615"
+          placeholder="+1XXXXXXXXXX"
           className="w-full rounded-lg border border-gray-300 px-1 py-1 text-sm outline-none transition focus:border-black focus:ring-1 focus:ring-black"
         />
         <p className="mt-1 text-xs text-gray-500">
-          Use E.164 format, for example +18572756615
+          Use E.164 format
         </p>
       </div>
 

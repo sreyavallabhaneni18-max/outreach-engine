@@ -115,18 +115,30 @@ async def send_single_channel(
             if response.get("status") == "failed":
                 retryable = response.get("retryable", False)
                 error = response.get("error", "Send failed")
+                error_code = response.get("error_code")
 
                 logger.error(
                     f"{channel} send failed (attempt {attempt + 1}) "
-                    f"retryable={retryable}: {error}"
+                    f"retryable={retryable}: "
+                    f"{f'[{error_code}] ' if error_code else ''}{error}"
                 )
 
                 if not retryable or attempt == max_retries:
-                    update_message_record(db, record, status="failed", error=error)
+                    db_error = f"{error_code}: {error}" if error_code else error
+
+                    update_message_record(
+                        db,
+                        record,
+                        status="failed",
+                        error=db_error,
+                        retry_count=attempt,
+                    )
+
                     return {
                         "channel": channel,
                         "status": "failed",
                         "error": error,
+                        "error_code": error_code,
                         "message_id": record.id,
                     }
 
@@ -169,16 +181,24 @@ async def send_single_channel(
                     "channel": channel,
                     "status": "failed",
                     "error": str(e),
+                    "error_code": None,
                     "message_id": record.id,
                 }
 
             await asyncio.sleep(2 ** attempt)
 
-    update_message_record(db, record, status="failed", error="Retries exhausted")
+    update_message_record(
+        db,
+        record,
+        status="failed",
+        error="Retries exhausted",
+        retry_count=max_retries,
+    )
     return {
         "channel": channel,
         "status": "failed",
         "error": "Retries exhausted",
+        "error_code": None,
         "message_id": record.id,
     }
 
